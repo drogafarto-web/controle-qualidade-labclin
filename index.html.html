@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Interno de Hematologia</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        @media print {
+            body > *:not(.report-container) {
+                display: none;
+            }
+            .report-container {
+                display: block;
+                padding: 0;
+                margin: 0;
+            }
+            .chart-container-print {
+                width: 100% !important;
+                height: auto !important;
+            }
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 24px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-6 md:p-8">
+        <!-- Título e Subtítulo -->
+        <div class="text-center mb-8">
+            <h1 id="main-title" class="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight">
+                Controle de Qualidade hematologico labclin
+            </h1>
+            <p class="mt-2 text-lg text-gray-500">
+                Visualização de dados do Controle Interno de Hematologia
+            </p>
+            <div id="user-info" class="mt-4 text-sm text-gray-400"></div>
+        </div>
+
+        <!-- Formulário para gerir Lotes e Analitos -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Gerir Lotes e Analitos</h2>
+            <form id="lot-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="lot-input" class="block text-sm font-medium text-gray-700">Lote</label>
+                    <input type="text" id="lot-input" name="lot-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: HHI-1326-L" required>
+                </div>
+                <div>
+                    <label for="analyte-input" class="block text-sm font-medium text-gray-700">Analito</label>
+                    <select id="analyte-input" name="analyte-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                        <option value="">Selecione...</option>
+                        <option value="WBC">WBC</option>
+                        <option value="RBC">RBC</option>
+                        <option value="HGB">HGB</option>
+                        <option value="PLT">PLT</option>
+                        <option value="HT">Hematócrito (HT)</option>
+                        <option value="VCM">Volume Corpuscular Médio (VCM)</option>
+                        <option value="HCM">Hemoglobina Corpuscular Média (HCM)</option>
+                        <option value="CHCM">Conc. Hemoglobina Corpuscular Média (CHCM)</option>
+                        <option value="NEUTROPHIL">Neutrófilos</option>
+                        <option value="LYMPHOCYTE">Linfócitos</option>
+                        <option value="MONOCYTE">Monócitos</option>
+                        <option value="EOSINOPHIL">Eosinófilos</option>
+                        <option value="BASOPHIL">Basófilos</option>
+                        <option value="RDW">RDW</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="equipment-input" class="block text-sm font-medium text-gray-700">Equipamento</label>
+                    <input type="text" id="equipment-input" name="equipment-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                </div>
+                <div>
+                    <label for="supplier-input" class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                    <input type="text" id="supplier-input" name="supplier-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required>
+                </div>
+                <div>
+                    <label for="mean-input" class="block text-sm font-medium text-gray-700">Média (Bula)</label>
+                    <input type="number" step="0.01" id="mean-input" name="mean-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 30" required>
+                </div>
+                <div>
+                    <label for="dp-input" class="block text-sm font-medium text-gray-700">DP (Bula)</label>
+                    <input type="number" step="0.01" id="dp-input" name="dp-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 5" required>
+                </div>
+                <div>
+                    <label for="min-range-input" class="block text-sm font-medium text-gray-700">Mínimo (Range)</label>
+                    <input type="number" step="0.01" id="min-range-input" name="min-range-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 25" required>
+                </div>
+                <div>
+                    <label for="max-range-input" class="block text-sm font-medium text-gray-700">Máximo (Range)</label>
+                    <input type="number" step="0.01" id="max-range-input" name="max-range-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 35" required>
+                </div>
+                <div class="flex items-end col-span-1 md:col-span-2 lg:col-span-2">
+                    <button id="add-lot-button" type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors">
+                        Adicionar Lote/Analito
+                    </button>
+                </div>
+            </form>
+            <div id="lot-message-box" class="mt-4 p-3 rounded-md text-sm text-center font-medium hidden"></div>
+        </div>
+
+        <!-- Seletor de Lote e Analito -->
+        <div class="mb-8 flex flex-col md:flex-row gap-4">
+            <div class="flex-1">
+                <label for="lot-selector" class="block text-sm font-medium text-gray-700">Selecione o Lote:</label>
+                <select id="lot-selector" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <option value="">-- Selecione um Lote --</option>
+                </select>
+            </div>
+            <div class="flex-1">
+                <label for="analyte-selector" class="block text-sm font-medium text-gray-700">Selecione o Analito:</label>
+                <select id="analyte-selector" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" disabled>
+                    <option value="">-- Selecione um Analito --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Informações do Controle (dinâmico com base na seleção) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mb-8 bg-gray-50 p-4 rounded-md">
+            <div id="equipment" class="text-gray-700"></div>
+            <div id="supplier" class="text-gray-700"></div>
+            <div id="control-lot" class="text-gray-700"></div>
+            <div id="unit" class="text-gray-700"></div>
+        </div>
+        
+        <!-- Formulário de Inserção de Dados -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Adicionar Novo Resultado</h2>
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <button id="open-single-form-button" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    Adicionar 1 Analito
+                </button>
+                <button id="open-multi-form-button" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors" disabled>
+                    Adicionar Vários Analitos
+                </button>
+            </div>
+
+            <form id="single-data-form" class="mt-4 hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label for="day-single" class="block text-sm font-medium text-gray-700">Dia do Mês</label>
+                    <input type="number" id="day-single" name="day-single" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 15" required>
+                </div>
+                <div>
+                    <label for="result-single" class="block text-sm font-medium text-gray-700">Resultado</label>
+                    <input type="number" step="0.01" id="result-single" name="result-single" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 28.5" required>
+                </div>
+                <div>
+                    <label for="notes-single" class="block text-sm font-medium text-gray-700">Observações (Opcional)</label>
+                    <input type="text" id="notes-single" name="notes-single" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: Resultado dentro do esperado">
+                </div>
+                <div class="flex items-end">
+                    <button id="submit-single-button" type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors" disabled>
+                        Carregando...
+                    </button>
+                </div>
+            </form>
+            <div id="data-message-box" class="mt-4 p-3 rounded-md text-sm text-center font-medium hidden"></div>
+        </div>
+
+        <!-- Relatório -->
+        <div class="mb-8 flex justify-end">
+            <button id="report-button" class="px-4 py-2 bg-gray-600 text-white rounded-md shadow-sm hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors" disabled>
+                Gerar Relatório
+            </button>
+        </div>
+
+        <!-- Gráfico -->
+        <div class="mb-8">
+            <h2 id="chart-title" class="text-2xl font-semibold text-gray-800 mb-4">Gráfico de Resultados Diários</h2>
+            <div class="p-4 bg-gray-50 rounded-lg shadow-inner">
+                <canvas id="hematologyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Westgard Rules Analysis -->
+        <div id="westgard-rules-section" class="mb-8 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 hidden" role="alert">
+            <h3 class="font-bold text-lg">Avisos de Qualidade (Regras de Westgard)</h3>
+            <ul id="westgard-rules-list" class="list-disc list-inside mt-2"></ul>
+        </div>
+
+        <!-- Tabela de Dados Brutos -->
+        <div>
+            <h2 id="table-title" class="text-2xl font-semibold text-gray-800 mb-4">Dados da Planilha</h2>
+            <div class="overflow-x-auto">
+                <table id="dataTable" class="min-w-full divide-y divide-gray-200 shadow-sm rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dia do Mês</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <!-- Rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Report Container for printing -->
+    <div id="report-container" class="report-container hidden">
+        <div class="report-header text-center mb-8">
+            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-800">Relatório de Controle de Qualidade</h1>
+            <p class="mt-2 text-md text-gray-500">Emitido em: <span id="report-date"></span></p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center mb-8 p-4 border rounded-md">
+            <div id="report-equipment" class="text-gray-700"></div>
+            <div id="report-supplier" class="text-gray-700"></div>
+            <div id="report-lot" class="text-gray-700"></div>
+            <div id="report-unit" class="text-gray-700"></div>
+        </div>
+        <div class="mb-8 p-4 border rounded-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Gráfico de Levey-Jennings</h2>
+            <div class="chart-container-print" style="width: 100%; height: 400px;">
+                <canvas id="reportChart"></canvas>
+            </div>
+        </div>
+        <div class="mb-8 p-4 border rounded-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Dados Detalhados</h2>
+            <table id="reportDataTable" class="min-w-full divide-y divide-gray-200 shadow-sm rounded-lg overflow-hidden">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dia do Mês</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observações</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div id="report-westgard-rules-section" class="mb-8 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 hidden" role="alert">
+            <h3 class="font-bold text-lg">Avisos de Qualidade (Regras de Westgard)</h3>
+            <ul id="report-westgard-rules-list" class="list-disc list-inside mt-2"></ul>
+        </div>
+    </div>
+
+    <!-- Modal para lançar todos os analitos -->
+    <div id="multi-analyte-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Adicionar Resultados do Dia</h2>
+            <form id="multi-data-form">
+                <div>
+                    <label for="day-multi" class="block text-sm font-medium text-gray-700">Dia do Mês</label>
+                    <input type="number" id="day-multi" name="day-multi" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" placeholder="Ex: 15" required>
+                </div>
+                <div class="overflow-x-auto mt-4">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Analito</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="multi-analyte-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div class="mt-6">
+                    <button id="submit-multi-button" type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                        Salvar Todos os Resultados
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Dados de referência estáticos para analitos, sem valores de média/dp
+        const staticAnalytesInfo = {
+            'WBC': { name: 'Leucócitos (WBC)', unit: 'K/uL' },
+            'RBC': { name: 'Eritrócitos (RBC)', unit: 'M/uL' },
+            'HGB': { name: 'Hemoglobina (HGB)', unit: 'g/dL' },
+            'PLT': { name: 'Plaquetas (PLT)', unit: 'K/uL' },
+            'HT': { name: 'Hematócrito (HT)', unit: '%' },
+            'VCM': { name: 'Volume Corpuscular Médio (VCM)', unit: 'fL' },
+            'HCM': { name: 'Hemoglobina Corpuscular Média (HCM)', unit: 'pg' },
+            'CHCM': { name: 'Conc. Hemoglobina Corpuscular Média (CHCM)', unit: 'g/dL' },
+            'NEUTROPHIL': { name: 'Neutrófilos', unit: 'K/uL' },
+            'LYMPHOCYTE': { name: 'Linfócitos', unit: 'K/uL' },
+            'MONOCYTE': { name: 'Monócitos', unit: 'K/uL' },
+            'EOSINOPHIL': { name: 'Eosinófilos', unit: 'K/uL' },
+            'BASOPHIL': { name: 'Basófilos', unit: 'K/uL' },
+            'RDW': { name: 'RDW', unit: '%' }
+        };
+
+        // Referências para elementos do DOM
+        const lotForm = document.getElementById('lot-form');
+        const lotInput = document.getElementById('lot-input');
+        const analyteInput = document.getElementById('analyte-input');
+        const equipmentInput = document.getElementById('equipment-input');
+        const supplierInput = document.getElementById('supplier-input');
+        const meanInput = document.getElementById('mean-input');
+        const dpInput = document.getElementById('dp-input');
+        const minRangeInput = document.getElementById('min-range-input');
+        const maxRangeInput = document.getElementById('max-range-input');
+        const addLotButton = document.getElementById('add-lot-button');
+        const lotMessageBox = document.getElementById('lot-message-box');
+        
+        const lotSelector = document.getElementById('lot-selector');
+        const analyteSelector = document.getElementById('analyte-selector');
+        
+        const mainTitle = document.getElementById('main-title');
+        const equipmentEl = document.getElementById('equipment');
+        const supplierEl = document.getElementById('supplier');
+        const controlLotEl = document.getElementById('control-lot');
+        const unitEl = document.getElementById('unit');
+        
+        const openSingleFormButton = document.getElementById('open-single-form-button');
+        const openMultiFormButton = document.getElementById('open-multi-form-button');
+        const singleDataForm = document.getElementById('single-data-form');
+        const daySingleInput = document.getElementById('day-single');
+        const resultSingleInput = document.getElementById('result-single');
+        const notesSingleInput = document.getElementById('notes-single');
+        const submitSingleButton = document.getElementById('submit-single-button');
+
+        const multiAnalyteModal = document.getElementById('multi-analyte-modal');
+        const closeMultiModalButton = multiAnalyteModal.querySelector('.close-button');
+        const multiDataForm = document.getElementById('multi-data-form');
+        const dayMultiInput = document.getElementById('day-multi');
+        const multiAnalyteTableBody = document.getElementById('multi-analyte-table-body');
+        
+        const userInfoEl = document.getElementById('user-info');
+        const dataMessageBox = document.getElementById('data-message-box');
+        const chartTitleEl = document.getElementById('chart-title');
+        const tableTitleEl = document.getElementById('table-title');
+        const reportButton = document.getElementById('report-button');
+
+        // Report DOM elements
+        const reportContainer = document.getElementById('report-container');
+        const reportDateEl = document.getElementById('report-date');
+        const reportEquipmentEl = document.getElementById('report-equipment');
+        const reportSupplierEl = document.getElementById('report-supplier');
+        const reportLotEl = document.getElementById('report-lot');
+        const reportUnitEl = document.getElementById('report-unit');
+        const reportChartCanvas = document.getElementById('reportChart');
+        const reportDataTableBody = document.querySelector('#reportDataTable tbody');
+        const reportWestgardRulesSection = document.getElementById('report-westgard-rules-section');
+        const reportWestgardRulesList = document.getElementById('report-westgard-rules-list');
+        const westgardRulesSection = document.getElementById('westgard-rules-section');
+        const westgardRulesList = document.getElementById('westgard-rules-list');
+
+
+        // Inicializar Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        
+        let myChart = null;
+        const ctx = document.getElementById('hematologyChart').getContext('2d');
+        let isAuthReady = false;
+        let allLotData = [];
+        let allResultData = [];
+        let currentAnalyteMetadata = null;
+        let currentFilteredData = [];
+        let currentLotAnalytes = [];
+
+        function showMessage(messageBoxEl, message, type) {
+            messageBoxEl.textContent = message;
+            messageBoxEl.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            if (type === 'success') {
+                messageBoxEl.classList.add('bg-green-100', 'text-green-700');
+            } else if (type === 'error') {
+                messageBoxEl.classList.add('bg-red-100', 'text-red-700');
+            }
+            setTimeout(() => {
+                messageBoxEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        function calculateStats(data) {
+            if (data.length <= 1) {
+                return { mean: data[0]?.result || 0, stdDev: 0 };
+            }
+            const values = data.map(d => d.result);
+            const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+            const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / (values.length - 1);
+            const stdDev = Math.sqrt(variance);
+            return { mean, stdDev };
+        }
+
+        function checkWestgardRules(data, stats) {
+            const rulesViolated = [];
+            if (data.length < 2) return rulesViolated;
+
+            const mean = stats.mean;
+            const s = stats.stdDev;
+            
+            // 1(3s) Rule
+            if (data.some(d => Math.abs(d.result - mean) > 3 * s)) {
+                rulesViolated.push("1(3s): Um ponto está a mais de 3 desvios padrão da média. Isso requer uma ação imediata.");
+            }
+
+            // 1(2s) Rule (Warning)
+            if (data.some(d => Math.abs(d.result - mean) > 2 * s)) {
+                rulesViolated.push("1(2s): Um ponto está a mais de 2 desvios padrão da média. Isso é um aviso e pode ser um indicador de um problema.");
+            }
+            
+            // R4s Rule
+            if (data.length >= 2) {
+                for (let i = 1; i < data.length; i++) {
+                    if (Math.abs(data[i].result - data[i-1].result) > 4 * s) {
+                        rulesViolated.push(`R4s: A diferença entre o ponto no dia ${data[i-1].day} e no dia ${data[i].day} é maior que 4 desvios padrão.`);
+                    }
+                }
+            }
+            
+            // Trend (6 em uma fileira)
+            if (data.length >= 6) {
+                let increasingCount = 0;
+                let decreasingCount = 0;
+                for (let i = 1; i < data.length; i++) {
+                    if (data[i].result > data[i-1].result) {
+                        increasingCount++;
+                        decreasingCount = 0;
+                    } else if (data[i].result < data[i-1].result) {
+                        decreasingCount++;
+                        increasingCount = 0;
+                    } else {
+                        increasingCount = 0;
+                        decreasingCount = 0;
+                    }
+                    if (increasingCount >= 5 || decreasingCount >= 5) {
+                        rulesViolated.push("6 em uma fileira: Seis ou mais pontos consecutivos estão a aumentar ou a diminuir. Isso sugere uma tendência.");
+                        break;
+                    }
+                }
+            }
+
+            // Shift (6 em uma fileira no mesmo lado)
+            if (data.length >= 6) {
+                let aboveMeanCount = 0;
+                let belowMeanCount = 0;
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i].result > mean) {
+                        aboveMeanCount++;
+                        belowMeanCount = 0;
+                    } else if (data[i].result < mean) {
+                        belowMeanCount++;
+                        aboveMeanCount = 0;
+                    } else {
+                        aboveMeanCount = 0;
+                        belowMeanCount = 0;
+                    }
+                    if (aboveMeanCount >= 6 || belowMeanCount >= 6) {
+                        rulesViolated.push("6 em uma fileira: Seis ou mais pontos consecutivos estão do mesmo lado da média. Isso sugere um desvio.");
+                        break;
+                    }
+                }
+            }
+
+            return Array.from(new Set(rulesViolated));
+        }
+
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            const auth = getAuth(app);
+
+            onAuthStateChanged(auth, async (user) => {
+                let userId;
+                if (user) {
+                    userId = user.uid;
+                } else {
+                    const customToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (customToken) {
+                        try {
+                            await signInWithCustomToken(auth, customToken);
+                            userId = auth.currentUser.uid;
+                        } catch (error) {
+                            console.error("Erro ao fazer login com token personalizado: ", error);
+                            await signInAnonymously(auth);
+                            userId = auth.currentUser.uid;
+                        }
+                    } else {
+                        await signInAnonymously(auth);
+                        userId = auth.currentUser.uid;
+                    }
+                }
+                
+                userInfoEl.textContent = `ID do Usuário: ${userId}`;
+                isAuthReady = true;
+                addLotButton.disabled = false;
+                addLotButton.textContent = 'Adicionar Lote/Analito';
+                openSingleFormButton.disabled = false;
+                submitSingleButton.disabled = false;
+                submitSingleButton.textContent = 'Adicionar Resultado';
+                reportButton.disabled = false;
+
+                // Setup Firestore listeners
+                setupLotDataListener(userId, db);
+                setupResultDataListener(userId, db);
+            });
+
+            function setupLotDataListener(userId, db) {
+                const lotCollection = collection(db, `artifacts/${appId}/users/${userId}/lot_metadata`);
+                onSnapshot(lotCollection, (querySnapshot) => {
+                    allLotData = [];
+                    querySnapshot.forEach((doc) => {
+                        allLotData.push(doc.data());
+                    });
+                    populateSelectors();
+                    updateUI();
+                });
+            }
+
+            function setupResultDataListener(userId, db) {
+                const resultCollection = collection(db, `artifacts/${appId}/users/${userId}/hematology_data`);
+                onSnapshot(resultCollection, (querySnapshot) => {
+                    allResultData = [];
+                    querySnapshot.forEach((doc) => {
+                        allResultData.push(doc.data());
+                    });
+                    updateUI();
+                });
+            }
+
+            function populateSelectors() {
+                const selectedLot = lotSelector.value;
+                const selectedAnalyte = analyteSelector.value;
+                
+                lotSelector.innerHTML = '<option value="">-- Selecione um Lote --</option>';
+                const uniqueLots = [...new Set(allLotData.map(d => d.lot))];
+                uniqueLots.forEach(lot => {
+                    const option = document.createElement('option');
+                    option.value = lot;
+                    option.textContent = lot;
+                    lotSelector.appendChild(option);
+                });
+                if (selectedLot) {
+                    lotSelector.value = selectedLot;
+                }
+                
+                const availableAnalytes = allLotData.filter(d => d.lot === selectedLot).map(d => d.analyte);
+                analyteSelector.innerHTML = '<option value="">-- Selecione um Analito --</option>';
+                currentLotAnalytes = [];
+                if (availableAnalytes.length > 0) {
+                    analyteSelector.disabled = false;
+                    openMultiFormButton.disabled = false;
+                    availableAnalytes.forEach(analyte => {
+                        const option = document.createElement('option');
+                        option.value = analyte;
+                        option.textContent = staticAnalytesInfo[analyte]?.name || analyte;
+                        analyteSelector.appendChild(option);
+                        currentLotAnalytes.push(staticAnalytesInfo[analyte]);
+                    });
+                    if (selectedAnalyte && availableAnalytes.includes(selectedAnalyte)) {
+                        analyteSelector.value = selectedAnalyte;
+                    }
+                } else {
+                    analyteSelector.disabled = true;
+                    openMultiFormButton.disabled = true;
+                }
+            }
+
+            function updateUI() {
+                const selectedLot = lotSelector.value;
+                const selectedAnalyte = analyteSelector.value;
+
+                if (!selectedLot || !selectedAnalyte) {
+                    equipmentEl.innerHTML = '';
+                    supplierEl.innerHTML = '';
+                    controlLotEl.innerHTML = '';
+                    unitEl.innerHTML = '';
+                    updateChart([], { mean: 0, stdDev: 0, minRange: 0, maxRange: 0 }, { name: '', unit: '' });
+                    updateTable([]);
+                    westgardRulesSection.classList.add('hidden');
+                    return;
+                }
+
+                currentAnalyteMetadata = allLotData.find(d => d.lot === selectedLot && d.analyte === selectedAnalyte);
+                if (!currentAnalyteMetadata) return;
+
+                currentFilteredData = allResultData
+                    .filter(d => d.lot === selectedLot && d.analyte === selectedAnalyte)
+                    .sort((a, b) => a.day - b.day);
+
+                equipmentEl.innerHTML = `<strong>Equipamento:</strong><br>${currentAnalyteMetadata.equipment || '-'}`;
+                supplierEl.innerHTML = `<strong>Fornecedor:</strong><br>${currentAnalyteMetadata.supplier || '-'}`;
+                controlLotEl.innerHTML = `<strong>Lote:</strong><br>${currentAnalyteMetadata.lot || '-'}`;
+                unitEl.innerHTML = `<strong>Unidade:</strong><br>${currentAnalyteMetadata.unit || '-'}`;
+                mainTitle.textContent = `Controle de Qualidade hematologico labclin`;
+                chartTitleEl.textContent = `Gráfico de Resultados Diários (${currentAnalyteMetadata.name || selectedAnalyte})`;
+                tableTitleEl.textContent = `Dados da Planilha (${currentAnalyteMetadata.name || selectedAnalyte})`;
+                
+                updateChart(currentFilteredData, currentAnalyteMetadata);
+                updateTable(currentFilteredData);
+                updateWestgardRules(currentFilteredData, { mean: currentAnalyteMetadata.mean, stdDev: currentAnalyteMetadata.stdDev });
+            }
+
+            function updateChart(data, analyteMetadata) {
+                const labels = data.map(d => d.day);
+                const dataPoints = data.map(d => d.result);
+                
+                const mean = analyteMetadata.mean;
+                const stdDev = analyteMetadata.stdDev;
+                const minRange = analyteMetadata.min_range;
+                const maxRange = analyteMetadata.max_range;
+
+                const datasets = [
+                    {
+                        label: `Resultado (${analyteMetadata.unit})`,
+                        data: dataPoints,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#fff',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                    },
+                    {
+                        label: `Média (${mean.toFixed(2)})`,
+                        data: Array(labels.length).fill(mean),
+                        borderColor: '#10b981',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    },
+                    {
+                        label: '+2s',
+                        data: Array(labels.length).fill(mean + 2 * stdDev),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    },
+                    {
+                        label: '-2s',
+                        data: Array(labels.length).fill(mean - 2 * stdDev),
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    },
+                    {
+                        label: '+3s',
+                        data: Array(labels.length).fill(mean + 3 * stdDev),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    },
+                    {
+                        label: '-3s',
+                        data: Array(labels.length).fill(mean - 3 * stdDev),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                    }
+                ];
+
+                if (!isNaN(minRange) && !isNaN(maxRange)) {
+                    datasets.push({
+                        label: `Range de Bula (${minRange.toFixed(2)}-${maxRange.toFixed(2)})`,
+                        data: Array(labels.length).fill(minRange),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        borderDash: [2, 2],
+                    });
+                    datasets.push({
+                        label: '', // Empty label to prevent duplicate legend entry
+                        data: Array(labels.length).fill(maxRange),
+                        borderColor: '#8b5cf6',
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        borderDash: [2, 2],
+                    });
+                }
+
+                const chartData = {
+                    labels: labels,
+                    datasets: datasets
+                };
+
+                const chartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: `Resultado (${analyteMetadata.unit})`
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Dia do Mês'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const result = data[context.dataIndex];
+                                    let label = `${context.dataset.label}: ${context.raw}`;
+                                    if (result && result.notes) {
+                                        label += ` | Obs: ${result.notes}`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                };
+                
+                if (myChart) {
+                    myChart.data = chartData;
+                    myChart.options.scales.y.title.text = `Resultado (${analyteMetadata.unit})`;
+                    myChart.update();
+                } else {
+                    myChart = new Chart(ctx, {
+                        type: 'line',
+                        data: chartData,
+                        options: chartOptions,
+                    });
+                }
+            }
+
+            function updateTable(data) {
+                const tableBody = document.querySelector('#dataTable tbody');
+                tableBody.innerHTML = '';
+                data.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.day}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.result || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.notes || '-'}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            function updateWestgardRules(data, stats) {
+                const violations = checkWestgardRules(data, stats);
+                westgardRulesList.innerHTML = '';
+                if (violations.length > 0) {
+                    violations.forEach(rule => {
+                        const li = document.createElement('li');
+                        li.textContent = rule;
+                        westgardRulesList.appendChild(li);
+                    });
+                    westgardRulesSection.classList.remove('hidden');
+                } else {
+                    westgardRulesSection.classList.add('hidden');
+                }
+            }
+
+            // Listeners
+            lotSelector.addEventListener('change', updateUI);
+            analyteSelector.addEventListener('change', updateUI);
+
+            openSingleFormButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                singleDataForm.classList.remove('hidden');
+            });
+            openMultiFormButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                populateMultiAnalyteTable();
+                multiAnalyteModal.style.display = 'flex';
+            });
+            closeMultiModalButton.addEventListener('click', () => {
+                multiAnalyteModal.style.display = 'none';
+            });
+            window.addEventListener('click', (event) => {
+                if (event.target === multiAnalyteModal) {
+                    multiAnalyteModal.style.display = 'none';
+                }
+            });
+
+            function populateMultiAnalyteTable() {
+                multiAnalyteTableBody.innerHTML = '';
+                currentLotAnalytes.forEach(analyte => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'bg-white';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${analyte.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <input type="number" step="0.01" class="w-24 border rounded-md px-2 py-1 text-sm result-input" data-analyte="${analyte.name}">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <input type="text" class="w-full border rounded-md px-2 py-1 text-sm notes-input" data-analyte="${analyte.name}">
+                        </td>
+                    `;
+                    multiAnalyteTableBody.appendChild(tr);
+                });
+            }
+
+            lotForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!isAuthReady) {
+                    showMessage(lotMessageBox, "Aguarde, o aplicativo ainda está carregando...", 'error');
+                    return;
+                }
+
+                const lot = lotInput.value.trim();
+                const analyte = analyteInput.value;
+                const equipment = equipmentInput.value.trim();
+                const supplier = supplierInput.value.trim();
+                const mean = parseFloat(meanInput.value);
+                const dp = parseFloat(dpInput.value);
+                const minRange = parseFloat(minRangeInput.value);
+                const maxRange = parseFloat(maxRangeInput.value);
+
+
+                if (!lot || !analyte || !equipment || !supplier || isNaN(mean) || isNaN(dp) || isNaN(minRange) || isNaN(maxRange)) {
+                    showMessage(lotMessageBox, "Por favor, preencha todos os campos do lote.", 'error');
+                    return;
+                }
+                
+                try {
+                    addLotButton.disabled = true;
+                    addLotButton.textContent = 'Adicionando...';
+
+                    await addDoc(collection(db, `artifacts/${appId}/users/${auth.currentUser.uid}/lot_metadata`), {
+                        lot,
+                        analyte,
+                        name: staticAnalytesInfo[analyte]?.name || analyte,
+                        unit: staticAnalytesInfo[analyte]?.unit || 'N/A',
+                        mean,
+                        stdDev: dp,
+                        min_range: minRange,
+                        max_range: maxRange,
+                        timestamp: new Date(),
+                        equipment,
+                        supplier
+                    });
+                    
+                    lotInput.value = '';
+                    analyteInput.value = '';
+                    equipmentInput.value = '';
+                    supplierInput.value = '';
+                    meanInput.value = '';
+                    dpInput.value = '';
+                    minRangeInput.value = '';
+                    maxRangeInput.value = '';
+                    
+                    showMessage(lotMessageBox, "Lote e Analito adicionados com sucesso!", 'success');
+                    
+                } catch (error) {
+                    console.error("Erro ao adicionar lote: ", error);
+                    showMessage(lotMessageBox, `Erro ao adicionar lote: ${error.message}`, 'error');
+                } finally {
+                    addLotButton.disabled = false;
+                    addLotButton.textContent = 'Adicionar Lote/Analito';
+                }
+            });
+
+            multiDataForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (!isAuthReady) {
+                    showMessage(dataMessageBox, "Aguarde, o aplicativo ainda está carregando...", 'error');
+                    return;
+                }
+
+                const selectedLot = lotSelector.value;
+                if (!selectedLot) {
+                    showMessage(dataMessageBox, "Selecione um lote para adicionar dados.", 'error');
+                    return;
+                }
+
+                const day = parseInt(dayMultiInput.value);
+                if (isNaN(day)) {
+                    showMessage(dataMessageBox, "Por favor, insira um dia válido.", 'error');
+                    return;
+                }
+
+                const results = [];
+                const rows = multiAnalyteTableBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    const analyteName = row.querySelector('.result-input').getAttribute('data-analyte');
+                    const resultValue = parseFloat(row.querySelector('.result-input').value);
+                    const notesValue = row.querySelector('.notes-input').value;
+                    if (!isNaN(resultValue)) {
+                        results.push({
+                            lot: selectedLot,
+                            analyte: analyteName,
+                            day,
+                            result: resultValue,
+                            notes: notesValue || null,
+                            timestamp: new Date()
+                        });
+                    }
+                });
+
+                if (results.length === 0) {
+                    showMessage(dataMessageBox, "Por favor, adicione pelo menos um resultado.", 'error');
+                    return;
+                }
+
+                try {
+                    for (const result of results) {
+                         await addDoc(collection(db, `artifacts/${appId}/users/${auth.currentUser.uid}/hematology_data`), result);
+                    }
+                    showMessage(dataMessageBox, "Resultados adicionados com sucesso!", 'success');
+                    multiAnalyteModal.style.display = 'none';
+                    dayMultiInput.value = '';
+                } catch (error) {
+                    console.error("Erro ao adicionar documentos em lote: ", error);
+                    showMessage(dataMessageBox, `Erro ao adicionar resultados: ${error.message}`, 'error');
+                }
+            });
+
+            singleDataForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (!isAuthReady) {
+                    showMessage(dataMessageBox, "Aguarde, o aplicativo ainda está carregando...", 'error');
+                    return;
+                }
+
+                const selectedLot = lotSelector.value;
+                const selectedAnalyte = analyteSelector.value;
+                
+                if (!selectedLot || !selectedAnalyte) {
+                    showMessage(dataMessageBox, "Selecione um lote e um analito para adicionar dados.", 'error');
+                    return;
+                }
+                
+                const day = parseInt(daySingleInput.value);
+                const result = parseFloat(resultSingleInput.value);
+                const notes = notesSingleInput.value || null;
+                
+                try {
+                    submitSingleButton.disabled = true;
+                    submitSingleButton.textContent = 'Adicionando...';
+                    
+                    await addDoc(collection(db, `artifacts/${appId}/users/${auth.currentUser.uid}/hematology_data`), {
+                        lot: selectedLot,
+                        analyte: selectedAnalyte,
+                        day,
+                        result,
+                        notes,
+                        timestamp: new Date()
+                    });
+                    
+                    daySingleInput.value = '';
+                    resultSingleInput.value = '';
+                    notesSingleInput.value = '';
+                    
+                    showMessage(dataMessageBox, "Resultado adicionado com sucesso!", 'success');
+                    
+                } catch (error) {
+                    console.error("Erro ao adicionar documento: ", error);
+                    showMessage(dataMessageBox, `Erro ao adicionar resultado: ${error.message}`, 'error');
+                } finally {
+                    submitSingleButton.disabled = false;
+                    submitSingleButton.textContent = 'Adicionar Resultado';
+                }
+            });
+
+            reportButton.addEventListener('click', () => {
+                const selectedLot = lotSelector.value;
+                const selectedAnalyte = analyteSelector.value;
+
+                if (!selectedLot || !selectedAnalyte) {
+                    showMessage(dataMessageBox, "Selecione um lote e um analito para gerar o relatório.", 'error');
+                    return;
+                }
+
+                // Populate report content
+                reportDateEl.textContent = new Date().toLocaleDateString();
+                reportEquipmentEl.innerHTML = equipmentEl.innerHTML;
+                reportSupplierEl.innerHTML = supplierEl.innerHTML;
+                reportLotEl.innerHTML = controlLotEl.innerHTML;
+                reportUnitEl.innerHTML = unitEl.innerHTML;
+
+                // Create report chart
+                const chartData = myChart.data;
+                const chartOptions = myChart.options;
+                new Chart(reportChartCanvas, {
+                    type: 'line',
+                    data: chartData,
+                    options: chartOptions,
+                });
+
+                // Populate report table
+                reportDataTableBody.innerHTML = '';
+                currentFilteredData.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row.day}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.result || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row.notes || '-'}</td>
+                    `;
+                    reportDataTableBody.appendChild(tr);
+                });
+
+                // Populate Westgard rules
+                const violations = checkWestgardRules(currentFilteredData, { mean: currentAnalyteMetadata.mean, stdDev: currentAnalyteMetadata.stdDev });
+                reportWestgardRulesList.innerHTML = '';
+                if (violations.length > 0) {
+                    violations.forEach(rule => {
+                        const li = document.createElement('li');
+                        li.textContent = rule;
+                        reportWestgardRulesList.appendChild(li);
+                    });
+                    reportWestgardRulesSection.classList.remove('hidden');
+                } else {
+                    reportWestgardRulesSection.classList.add('hidden');
+                }
+
+                window.print();
+            });
+
+        } else {
+            console.error("Firebase config is missing or invalid.");
+            document.body.innerHTML = '<div class="p-6 text-center text-red-500">Erro: A configuração do Firebase está ausente ou é inválida.</div>';
+        }
+    </script>
+</body>
+</html>
